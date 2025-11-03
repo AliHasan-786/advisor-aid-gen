@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -12,11 +13,49 @@ serve(async (req) => {
   }
 
   try {
+    // Validate authentication
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Authentication required' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { clientData } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
     if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+      console.error('LOVABLE_API_KEY not configured');
+      return new Response(
+        JSON.stringify({ error: 'Service configuration error. Please contact support.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Input validation schema
+    const clientDataSchema = z.object({
+      ageRange: z.enum(['25-35', '36-50', '51-65', '65+']),
+      primaryGoal: z.string().trim().min(1).max(200),
+      milestones: z.string().max(500).optional(),
+      dependents: z.string().regex(/^\d+$/, 'Must be a number'),
+      employerBenefits: z.string().max(500).optional(),
+      riskComfort: z.enum(['Low', 'Moderate', 'High']),
+      meetingObjective: z.enum(['Annual Review', 'Life Event', 'Retirement Planning', 'Investment Check-In']),
+      channel: z.enum(['In-Person', 'Virtual']),
+      timeAvailable: z.enum(['15', '30', '60'])
+    });
+
+    // Validate input
+    let validatedData;
+    try {
+      validatedData = clientDataSchema.parse(clientData);
+    } catch (validationError: any) {
+      console.error('Input validation failed:', validationError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid input data. Please check your form fields.' }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Create Supabase client for compliance rules
@@ -31,6 +70,15 @@ serve(async (req) => {
     
     const forbiddenPhrases = complianceRules?.map(r => r.forbidden_phrase) || [];
 
+    // Sanitize inputs to prevent prompt injection
+    const sanitize = (text: string): string => {
+      return text
+        .replace(/[<>]/g, '')
+        .replace(/ignore previous/gi, '[filtered]')
+        .replace(/system prompt/gi, '[filtered]')
+        .trim();
+    };
+
     // Build system prompt with compliance rules
     const systemPrompt = `You are an AI compliance-aware assistant for a regulated financial-services company (New York Life).
 Generate a professional meeting brief for a financial advisor based on the client context provided.
@@ -44,15 +92,15 @@ CRITICAL COMPLIANCE RULES:
 - All recommendations must be reviewed by a licensed representative
 
 Client Context:
-- Age Range: ${clientData.ageRange}
-- Primary Goal: ${clientData.primaryGoal}
-- Financial Milestones: ${clientData.milestones || 'None specified'}
-- Dependents: ${clientData.dependents}
-- Employer Benefits: ${clientData.employerBenefits || 'None specified'}
-- Risk Comfort: ${clientData.riskComfort}
-- Meeting Objective: ${clientData.meetingObjective}
-- Meeting Channel: ${clientData.channel}
-- Time Available: ${clientData.timeAvailable} minutes
+- Age Range: ${sanitize(validatedData.ageRange)}
+- Primary Goal: ${sanitize(validatedData.primaryGoal)}
+- Financial Milestones: ${sanitize(validatedData.milestones || 'None specified')}
+- Dependents: ${validatedData.dependents}
+- Employer Benefits: ${sanitize(validatedData.employerBenefits || 'None specified')}
+- Risk Comfort: ${sanitize(validatedData.riskComfort)}
+- Meeting Objective: ${sanitize(validatedData.meetingObjective)}
+- Meeting Channel: ${sanitize(validatedData.channel)}
+- Time Available: ${validatedData.timeAvailable} minutes
 
 Generate a structured brief with exactly these sections:
 1. Meeting Agenda (3-5 items): Key topics to cover based on time available
@@ -90,7 +138,19 @@ Return ONLY valid JSON with this exact structure:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('AI Gateway error:', response.status, errorText);
-      throw new Error(`AI Gateway error: ${response.status}`);
+      
+      // Return user-friendly error messages
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'Service is temporarily busy. Please try again in a few minutes.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ error: 'Unable to generate brief. Please try again.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const aiData = await response.json();
@@ -105,7 +165,10 @@ Return ONLY valid JSON with this exact structure:
       brief = JSON.parse(jsonStr);
     } catch (parseError) {
       console.error('Failed to parse AI response:', content);
-      throw new Error('Invalid AI response format');
+      return new Response(
+        JSON.stringify({ error: 'Unable to process AI response. Please try again.' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     // Filter forbidden phrases from all text fields
@@ -133,7 +196,7 @@ Return ONLY valid JSON with this exact structure:
   } catch (error: any) {
     console.error('Error in generate-brief:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }),
+      JSON.stringify({ error: 'An error occurred while generating your brief. Please try again.' }),
       { 
         status: 500,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

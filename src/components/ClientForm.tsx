@@ -78,6 +78,7 @@ export const ClientForm = ({ onSubmit, disabled }: ClientFormProps) => {
               value={formData.primaryGoal}
               onChange={(e) => updateField('primaryGoal', e.target.value)}
               placeholder="e.g., Retirement savings, college fund"
+              maxLength={200}
               required
             />
           </div>
@@ -87,10 +88,15 @@ export const ClientForm = ({ onSubmit, disabled }: ClientFormProps) => {
             <Label htmlFor="dependents">Number of Dependents</Label>
             <Input
               id="dependents"
-              type="number"
-              min="0"
+              type="text"
               value={formData.dependents}
-              onChange={(e) => updateField('dependents', e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, '');
+                updateField('dependents', value);
+              }}
+              placeholder="0"
+              pattern="\d+"
+              required
             />
           </div>
 
@@ -142,6 +148,7 @@ export const ClientForm = ({ onSubmit, disabled }: ClientFormProps) => {
             value={formData.milestones}
             onChange={(e) => updateField('milestones', e.target.value)}
             placeholder="e.g., Recent home purchase, upcoming marriage"
+            maxLength={500}
             rows={2}
           />
         </div>
@@ -153,6 +160,7 @@ export const ClientForm = ({ onSubmit, disabled }: ClientFormProps) => {
             value={formData.employerBenefits}
             onChange={(e) => updateField('employerBenefits', e.target.value)}
             placeholder="e.g., 401(k) match, health insurance"
+            maxLength={500}
             rows={2}
           />
         </div>

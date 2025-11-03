@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ClientForm } from "@/components/ClientForm";
 import { BriefResults } from "@/components/BriefResults";
 import { Header } from "@/components/Header";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, LogOut } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
 
 export interface ClientFormData {
   ageRange: string;
@@ -27,13 +30,46 @@ export interface BriefData {
 }
 
 const Index = () => {
-  const [loading, setLoading] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [generatingBrief, setGeneratingBrief] = useState(false);
   const [briefData, setBriefData] = useState<BriefData | null>(null);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Check authentication
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        navigate("/auth");
+      }
+      setLoading(false);
+    });
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        navigate("/auth");
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
+  };
 
   const handleGenerateBrief = async (formData: ClientFormData) => {
-    setLoading(true);
+    if (!user) return;
+    
+    setGeneratingBrief(true);
     setBriefData(null);
 
     try {
@@ -46,10 +82,11 @@ const Index = () => {
 
       setBriefData(data.brief);
       
-      // Store session in telemetry
+      // Store session in telemetry with user_id
       const { data: sessionData, error: sessionError } = await supabase
         .from('brief_sessions')
         .insert({
+          user_id: user.id,
           meeting_objective: formData.meetingObjective,
           time_available: parseInt(formData.timeAvailable),
           client_age_range: formData.ageRange,
@@ -76,7 +113,7 @@ const Index = () => {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setGeneratingBrief(false);
     }
   };
 
@@ -98,11 +135,26 @@ const Index = () => {
     }
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[hsl(var(--nyl-accent))]" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background">
       <Header />
       
       <main className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="flex justify-end mb-4">
+          <Button variant="outline" onClick={handleLogout} size="sm">
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign Out
+          </Button>
+        </div>
+
         <div className="text-center mb-12 space-y-4">
           <h1 className="text-4xl md:text-5xl font-bold text-primary">
             Compliant Advisor Brief Builder
@@ -113,9 +165,9 @@ const Index = () => {
         </div>
 
         <div className="grid gap-8">
-          <ClientForm onSubmit={handleGenerateBrief} disabled={loading} />
+          <ClientForm onSubmit={handleGenerateBrief} disabled={generatingBrief} />
 
-          {loading && (
+          {generatingBrief && (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <span className="ml-3 text-lg text-muted-foreground">
@@ -124,7 +176,7 @@ const Index = () => {
             </div>
           )}
 
-          {briefData && !loading && (
+          {briefData && !generatingBrief && (
             <BriefResults data={briefData} onFeedback={handleFeedback} />
           )}
         </div>
