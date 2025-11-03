@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogOut } from "lucide-react";
-import type { User } from "@supabase/supabase-js";
+import type { Session, User } from "@supabase/supabase-js";
 
 export interface ClientFormData {
   ageRange: string;
@@ -31,6 +31,7 @@ export interface BriefData {
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [generatingBrief, setGeneratingBrief] = useState(false);
   const [briefData, setBriefData] = useState<BriefData | null>(null);
@@ -41,6 +42,7 @@ const Index = () => {
   useEffect(() => {
     // Check authentication
     supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
       if (session?.user) {
         setUser(session.user);
       } else {
@@ -51,6 +53,7 @@ const Index = () => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
       if (session?.user) {
         setUser(session.user);
       } else {
@@ -67,8 +70,16 @@ const Index = () => {
   };
 
   const handleGenerateBrief = async (formData: ClientFormData) => {
-    if (!user) return;
-    
+    if (!user || !session) {
+      toast({
+        title: "Session Expired",
+        description: "Please sign in again to generate a new brief.",
+        variant: "destructive",
+      });
+      navigate("/auth");
+      return;
+    }
+
     setGeneratingBrief(true);
     setBriefData(null);
 
