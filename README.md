@@ -20,21 +20,52 @@ If you want to work locally using your own IDE, you can clone this repo and push
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-Follow these steps:
+### Step-by-step setup guide (macOS & Cursor friendly)
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+1. **Install the developer command line tools (no Xcode needed).** Open Terminal (or Cursor's terminal) and run:
+   ```sh
+   xcode-select --install
+   ```
+   macOS will prompt you to install the lightweight Command Line Tools package that provides Git. After installation, accept the license one time:
+   ```sh
+   sudo xcodebuild -license accept
+   ```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+2. **Install Node.js.** We recommend using `nvm` so you can manage Node versions easily:
+   ```sh
+   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+   source ~/.nvm/nvm.sh
+   nvm install --lts
+   ```
 
-# Step 3: Install the necessary dependencies.
-npm i
+3. **Clone the repository.**
+   ```sh
+   git clone https://github.com/AliHasan-786/advisor-aid-gen.git
+   cd advisor-aid-gen
+   ```
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+4. **Install project dependencies.**
+   ```sh
+   npm install
+   ```
+
+5. **(Optional) Configure Supabase credentials.**
+   The recruiter demo runs entirely client-side, so you can skip this step. If you want to reconnect the app to your Supabase project, create a `.env` file and populate the variables:
+   ```env
+   VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
+   VITE_SUPABASE_PUBLISHABLE_KEY=<your-public-anon-key>
+   VITE_SUPABASE_PROJECT_ID=<your-project-id>
+   ```
+
+6. **Start the development server.**
+   ```sh
+   npm run dev
+   ```
+   Vite will print a local URL (usually `http://localhost:5173`). Open that URL in your browser or Cursor's preview pane.
+
+7. **Stop the server when finished.** Press `Ctrl+C` in the terminal to stop the dev server.
+
+> **Tip for Windows users:** Install [Node.js LTS](https://nodejs.org/en/download) and [Git for Windows](https://git-scm.com/download/win), then run the same clone/install/dev commands in PowerShell.
 
 **Edit a file directly in GitHub**
 
