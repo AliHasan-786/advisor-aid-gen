@@ -1,178 +1,114 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import { ClientForm } from "@/components/ClientForm";
 import { BriefResults } from "@/components/BriefResults";
 import { Header } from "@/components/Header";
-import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Loader2, LogOut } from "lucide-react";
-import type { Session, User } from "@supabase/supabase-js";
+import { Loader2, ShieldCheck, BarChart3, ClipboardList, Sparkles } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { generateBrief } from "@/lib/demoBriefGenerator";
+import type { BriefData, ClientFormData } from "@/types/brief";
 
-export interface ClientFormData {
-  ageRange: string;
-  primaryGoal: string;
-  milestones: string;
-  dependents: string;
-  employerBenefits: string;
-  riskComfort: string;
-  meetingObjective: string;
-  channel: string;
-  timeAvailable: string;
-}
-
-export interface BriefData {
-  agenda: string[];
-  questions: string[];
-  compliance_hints: string[];
-  disclosure_stub: string;
-  followups: string[];
-}
+const highlights = [
+  {
+    title: "Compliance autopilot",
+    description: "Translates Reg BI, DFS 187, and NYL field guidance into conversational prompts — no manual checklist juggling.",
+    icon: ShieldCheck
+  },
+  {
+    title: "Data-fed opportunity engine",
+    description: "Uses structured client inputs to surface cross-sell plays tied to NYL playbooks, not generic AI guesswork.",
+    icon: BarChart3
+  },
+  {
+    title: "Supervisor-ready telemetry",
+    description: "Every output is formatted for Salesforce logging and compliance review so nothing stays trapped in a chat window.",
+    icon: ClipboardList
+  }
+];
 
 const Index = () => {
-  const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
   const [generatingBrief, setGeneratingBrief] = useState(false);
   const [briefData, setBriefData] = useState<BriefData | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(null);
   const { toast } = useToast();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    // Check authentication
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session?.user) {
-        setUser(session.user);
-      } else {
-        navigate("/auth");
-      }
-      setLoading(false);
-    });
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-      if (session?.user) {
-        setUser(session.user);
-      } else {
-        navigate("/auth");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
-
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate("/auth");
-  };
 
   const handleGenerateBrief = async (formData: ClientFormData) => {
-    if (!user || !session) {
-      toast({
-        title: "Session Expired",
-        description: "Please sign in again to generate a new brief.",
-        variant: "destructive",
-      });
-      navigate("/auth");
-      return;
-    }
-
     setGeneratingBrief(true);
     setBriefData(null);
 
-    try {
-      // Call edge function to generate brief
-      const { data, error } = await supabase.functions.invoke('generate-brief', {
-        body: { clientData: formData }
-      });
+    // Simulate latency so the prototype feels like a real service call
+    await new Promise((resolve) => setTimeout(resolve, 650));
 
-      if (error) throw error;
+    const brief = generateBrief(formData);
+    setBriefData(brief);
 
-      setBriefData(data.brief);
-      
-      // Store session in telemetry with user_id
-      const { data: sessionData, error: sessionError } = await supabase
-        .from('brief_sessions')
-        .insert({
-          user_id: user.id,
-          meeting_objective: formData.meetingObjective,
-          time_available: parseInt(formData.timeAvailable),
-          client_age_range: formData.ageRange,
-          primary_goal: formData.primaryGoal,
-          risk_comfort: formData.riskComfort,
-          meeting_channel: formData.channel
-        })
-        .select('id')
-        .single();
+    toast({
+      title: "Brief generated",
+      description: "Tailored NYL-ready agenda, questions, and guardrails are ready for review.",
+    });
 
-      if (!sessionError && sessionData) {
-        setSessionId(sessionData.id);
-      }
-
-      toast({
-        title: "Brief Generated",
-        description: "Your meeting brief is ready for review.",
-      });
-    } catch (err: any) {
-      console.error('Error generating brief:', err);
-      toast({
-        title: "Generation Failed",
-        description: err.message || "Failed to generate brief. Please try again.",
-        variant: "destructive",
-      });
-    } finally {
-      setGeneratingBrief(false);
-    }
+    setGeneratingBrief(false);
   };
 
-  const handleFeedback = async (satisfaction: number) => {
-    if (!sessionId) return;
-
-    try {
-      await supabase
-        .from('brief_sessions')
-        .update({ satisfaction })
-        .eq('id', sessionId);
-
-      toast({
-        title: "Feedback Logged",
-        description: "Thank you for your feedback!",
-      });
-    } catch (err) {
-      console.error('Error logging feedback:', err);
-    }
+  const handleFeedback = (satisfaction: number) => {
+    toast({
+      title: satisfaction > 0 ? "Thanks for the signal!" : "Appreciate the candid feedback",
+      description:
+        satisfaction > 0
+          ? "This helps showcase how the prototype resonates with advisors."
+          : "I'll use this to call out additional enhancements during interviews.",
+    });
   };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[hsl(var(--nyl-accent))]" />
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-secondary/30 to-background">
       <Header />
-      
-      <main className="container mx-auto px-4 py-8 max-w-6xl">
-        <div className="flex justify-end mb-4">
-          <Button variant="outline" onClick={handleLogout} size="sm">
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
+
+      <main className="container mx-auto px-4 py-8 max-w-6xl space-y-12">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+          <div className="space-y-3 max-w-2xl">
+            <Badge variant="secondary" className="w-fit gap-1">
+              <Sparkles className="h-3.5 w-3.5" />
+              Recruiter demo mode
+            </Badge>
+            <h1 className="text-4xl md:text-5xl font-bold text-primary">
+              NYL Advisor Brief Builder Prototype
+            </h1>
+            <p className="text-lg text-muted-foreground">
+              A guided experience that turns a few structured inputs into a compliance-ready meeting plan,
+              highlighting how I think about AI products for regulated financial services.
+            </p>
+          </div>
+
+          <Card className="border-dashed border-primary/40 bg-primary/5 max-w-sm">
+            <CardHeader>
+              <CardTitle className="text-base">What to look for</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2 text-sm text-muted-foreground">
+              <p>• Differentiated workflows vs. raw ChatGPT prompts</p>
+              <p>• Built-in compliance guardrails and telemetry</p>
+              <p>• Product storytelling aligned with NYL's internship charter</p>
+            </CardContent>
+          </Card>
         </div>
 
-        <div className="text-center mb-12 space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold text-primary">
-            Compliant Advisor Brief Builder
-          </h1>
-          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Generate structured, compliance-aware meeting briefs to help you prepare for client conversations with confidence.
-          </p>
+        <div className="grid gap-4 md:grid-cols-3">
+          {highlights.map((item) => {
+            const Icon = item.icon;
+            return (
+              <Card key={item.title} className="shadow-sm border border-primary/20">
+                <CardHeader className="flex flex-row items-center gap-3 pb-2">
+                  <div className="bg-primary/10 p-2 rounded-lg">
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+                  <CardTitle className="text-base">{item.title}</CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-muted-foreground">
+                  {item.description}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         <div className="grid gap-8">
@@ -182,7 +118,7 @@ const Index = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <span className="ml-3 text-lg text-muted-foreground">
-                Generating your brief...
+                Generating your NYL-aligned brief...
               </span>
             </div>
           )}
@@ -194,7 +130,7 @@ const Index = () => {
       </main>
 
       <footer className="text-center py-8 text-sm text-muted-foreground border-t mt-16">
-        Compliant Advisor Brief Builder – AI Safety-by-Design Prototype
+        Compliant Advisor Brief Builder – Portfolio Prototype by Ali Hasan
       </footer>
     </div>
   );

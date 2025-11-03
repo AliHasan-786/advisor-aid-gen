@@ -49,7 +49,8 @@ The only requirement is having Node.js & npm installed - [install with nvm](http
    npm install
    ```
 
-5. **Create your environment file.** Copy `.env.example` to `.env` if it exists (or create `.env`) and populate the Supabase variables:
+5. **(Optional) Configure Supabase credentials.**
+   The recruiter demo runs entirely client-side, so you can skip this step. If you want to reconnect the app to your Supabase project, create a `.env` file and populate the variables:
    ```env
    VITE_SUPABASE_URL=https://<your-project-ref>.supabase.co
    VITE_SUPABASE_PUBLISHABLE_KEY=<your-public-anon-key>

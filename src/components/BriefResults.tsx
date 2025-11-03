@@ -1,13 +1,27 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, ChevronUp, ThumbsUp, ThumbsDown, ListChecks, MessageSquareQuote, Shield, FileText, CheckSquare } from "lucide-react";
-import { BriefData } from "@/pages/Index";
-import { useState } from "react";
+import { Badge } from "@/components/ui/badge";
+import {
+  ChevronDown,
+  ChevronUp,
+  ThumbsUp,
+  ThumbsDown,
+  ListChecks,
+  MessageSquareQuote,
+  Shield,
+  FileText,
+  CheckSquare,
+  Sparkles,
+  Target,
+  BarChart3
+} from "lucide-react";
+import type { BriefData } from "@/types/brief";
 
 interface BriefResultsProps {
   data: BriefData;
-  onFeedback: (satisfaction: number) => void;
+  onFeedback?: (satisfaction: number) => void;
 }
 
 export const BriefResults = ({ data, onFeedback }: BriefResultsProps) => {
@@ -25,7 +39,7 @@ export const BriefResults = ({ data, onFeedback }: BriefResultsProps) => {
   };
 
   const handleFeedback = (value: number) => {
-    onFeedback(value);
+    onFeedback?.(value);
     setFeedbackGiven(true);
   };
 
@@ -145,6 +159,103 @@ export const BriefResults = ({ data, onFeedback }: BriefResultsProps) => {
           </Card>
         );
       })}
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="shadow-medium lg:col-span-2">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <Target className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle className="text-lg">Opportunity Playbook</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  High-impact NYL plays derived from the client's data signals
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {data.opportunities.map((opportunity, idx) => (
+              <div key={idx} className="border rounded-lg p-4 space-y-3">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="font-semibold text-primary">{opportunity.title}</h3>
+                    <p className="text-sm text-muted-foreground mt-1">{opportunity.rationale}</p>
+                  </div>
+                </div>
+                <p className="text-sm">
+                  <span className="font-medium text-primary">Impact:</span> {opportunity.impact}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-medium">
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <div>
+                <CardTitle className="text-lg">Signals & Guardrails</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Data cues captured for compliance-ready follow-through
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Guardrails</h4>
+              <ul className="space-y-2 text-sm">
+                {data.guardrails.map((guardrail, idx) => (
+                  <li key={idx} className="flex gap-2">
+                    <Badge variant="outline" className="mt-0.5">{idx + 1}</Badge>
+                    <span>{guardrail}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Data Signals</h4>
+              <div className="space-y-3">
+                {data.dataSignals.map((signal, idx) => (
+                  <div key={idx} className="border rounded-lg p-3">
+                    <p className="text-sm font-semibold text-primary">{signal.label}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{signal.insight}</p>
+                    <p className="text-xs mt-2 text-muted-foreground/80">
+                      <span className="font-medium text-foreground">Action:</span> {signal.action}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card className="shadow-medium">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <div>
+              <CardTitle className="text-lg">Why this beats a generic chatbot</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Differentiators tailored to NYL's product and compliance environment
+              </p>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-3">
+            {data.differentiators.map((item, idx) => (
+              <li key={idx} className="flex gap-3 text-sm">
+                <Badge variant="secondary">{idx + 1}</Badge>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
     </div>
   );
 };
