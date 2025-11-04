@@ -57,7 +57,7 @@ export function calculateAggregateStats(briefs: Brief[]) {
     return {
       avgComplianceIQ: 0,
       totalBriefs: 0,
-      avgFlagsPerBrief: 0,
+      avgFlagsPerBrief: '0.0',
       topWeakTopic: 'None',
       topWeakTopicCount: 0
     };
