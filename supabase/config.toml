@@ -1,4 +1,0 @@
-project_id = "vwhaagtoxrixnuplysbi"
-
-[functions.generate-brief]
-verify_jwt = true
