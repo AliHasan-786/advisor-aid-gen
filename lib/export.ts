@@ -61,7 +61,7 @@ export async function createAuditPdf(snapshot: AuditSnapshot): Promise<Blob> {
   const margin = 40;
   let y = 750;
 
-  const drawLine = (text: string, size = 12) => {
+  const drawLine = (text: string, size = 12, _bold = false) => {
     page.drawText(text, {
       x: margin,
       y,
@@ -108,7 +108,11 @@ export async function createAuditPdf(snapshot: AuditSnapshot): Promise<Blob> {
   });
 
   const pdfBytes = await doc.save();
-  return new Blob([pdfBytes], { type: "application/pdf" });
+  const pdfBuffer = pdfBytes.buffer.slice(
+    pdfBytes.byteOffset,
+    pdfBytes.byteOffset + pdfBytes.byteLength
+  ) as ArrayBuffer;
+  return new Blob([pdfBuffer], { type: "application/pdf" });
 }
 
 export function downloadBlob(blob: Blob, filename: string) {

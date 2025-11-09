@@ -4,13 +4,14 @@ import type { ComplianceCoverage, TopicKey } from "@/lib/types";
 export function computeCoverageFromText(text: string, explicitTopics: TopicKey[]): ComplianceCoverage {
   const normalized = text.toLowerCase();
 
-  const coverageEntries = (Object.keys(TOPIC_KEYWORDS) as TopicKey[]).map((topic) => {
+  const coverage = (Object.keys(TOPIC_KEYWORDS) as TopicKey[]).reduce<Record<TopicKey, number>>((acc, topic) => {
     const hasKeyword = TOPIC_KEYWORDS[topic].some((keyword) => normalized.includes(keyword));
     const hasExplicit = explicitTopics.includes(topic);
-    return [topic, hasKeyword || hasExplicit ? 1 : 0] as const;
-  });
+    acc[topic] = hasKeyword || hasExplicit ? 1 : 0;
+    return acc;
+  }, {} as Record<TopicKey, number>);
 
-  return Object.fromEntries(coverageEntries) as ComplianceCoverage;
+  return coverage as ComplianceCoverage;
 }
 
 export function weightedComplianceIQ(coverage: ComplianceCoverage, flags: number): number {

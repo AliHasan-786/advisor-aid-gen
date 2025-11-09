@@ -269,7 +269,11 @@ export function createSyntheticBrief(
   const product = pickOne(rng, PRODUCTS);
   const client = generateClient(rng);
   const timeAvailableMin = pickOne(rng, [15, 30, 60] as const);
-  const topics = pickMany(rng, ["suitability_objective", "risk_tolerance", "liquidity_needs", "time_horizon", "conflict_disclosure", "recordkeeping"], randInt(rng, 2, 3));
+  const topics = pickMany(
+    rng,
+    ["suitability_objective", "risk_tolerance", "liquidity_needs", "time_horizon", "conflict_disclosure", "recordkeeping"] satisfies TopicKey[],
+    randInt(rng, 2, 3)
+  );
   let briefText = buildBriefNarrative(rng, advisor, product, client, topics, timeAvailableMin);
   briefText = injectForbiddenPhrases(rng, briefText);
   const coverage = computeCoverageFromText(briefText, topics);
@@ -328,7 +332,11 @@ export function createBriefFromForm(
     risk: input.risk,
     milestones: input.milestones.length ? input.milestones : pickMany(rng, MILESTONE_LIBRARY, 1)
   };
-  const topics = pickMany(rng, ["suitability_objective", "risk_tolerance", "liquidity_needs", "time_horizon", "conflict_disclosure", "recordkeeping"], 3);
+  const topics = pickMany(
+    rng,
+    ["suitability_objective", "risk_tolerance", "liquidity_needs", "time_horizon", "conflict_disclosure", "recordkeeping"] satisfies TopicKey[],
+    3
+  );
   let briefText = [
     `Agenda: Warm recap (${Math.min(5, Math.round(input.timeAvailable * 0.2))} min). Objective: ${input.objective}.` +
       ` Discovery on ${client.milestones.join(", ")} (${Math.max(5, Math.round(input.timeAvailable * 0.35))} min).` +

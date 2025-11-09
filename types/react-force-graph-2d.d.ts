@@ -19,6 +19,7 @@ declare module "react-force-graph-2d" {
     cooldownTicks?: number;
     warmupTicks?: number;
     d3VelocityDecay?: number;
+    d3Force?: (forceGraph: { d3Force: (...args: any[]) => any }) => void;
     onNodeClick?: (node: any) => void;
     nodeCanvasObjectMode?: (node: any) => "before" | "after" | undefined;
     nodeCanvasObject?: (node: any, ctx: CanvasRenderingContext2D) => void;

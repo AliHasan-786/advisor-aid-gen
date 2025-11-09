@@ -4,17 +4,18 @@ import { ChangeEvent } from "react";
 import clsx from "clsx";
 import { useMindshare } from "@/components/MindshareProvider";
 import { ADVISOR_TENURE, OFFICES, PRODUCTS, RISK_BANDS } from "@/lib/constants";
+import type { FiltersState } from "@/lib/types";
 
-function CheckboxList({
+function CheckboxList<T extends string>({
   title,
   items,
   selected,
   onToggle
 }: {
   title: string;
-  items: string[];
-  selected: string[];
-  onToggle: (value: string) => void;
+  items: ReadonlyArray<T>;
+  selected: T[];
+  onToggle: (value: T) => void;
 }) {
   return (
     <div className="space-y-2">
@@ -36,14 +37,17 @@ function CheckboxList({
   );
 }
 
+const FILTER_KEYS = ["offices", "products", "risks", "tenure"] as const;
+type FilterKey = (typeof FILTER_KEYS)[number];
+
 export function FilterPanel() {
   const { filters, setFilters, resetFilters, stats, filteredBriefs } = useMindshare();
 
-  const toggleValue = (key: "offices" | "products" | "risks" | "tenure", value: string) => {
+  const toggleValue = <K extends FilterKey>(key: K, value: FiltersState[K][number]) => {
     const set = new Set(filters[key]);
     if (set.has(value)) set.delete(value);
-    else set.add(value as never);
-    setFilters({ ...filters, [key]: Array.from(set) });
+    else set.add(value);
+    setFilters({ ...filters, [key]: Array.from(set) as FiltersState[K] });
   };
 
   const handleSearch = (event: ChangeEvent<HTMLInputElement>) => {
